@@ -21,6 +21,8 @@ sudo apt update
 sudo apt install python3.11 -y
 python3.11 --version
 echo "Python 3.11 installation complete."
+#Install pip
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 
 sudo apt-get update
 sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17
@@ -33,6 +35,11 @@ sudo apt-get install -y unixodbc-dev
 
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 sudo apt install -y ./google-chrome-stable_current_amd64.deb
+echo google-chrome --version
+
+echo 'Instalando bibliotecas em requirements.txt'
+pip install -r requirements.txt
+
 
 sudo apt update
 sudo apt install -y \
@@ -52,5 +59,4 @@ sudo apt install -y \
   wget \
   curl
 
-sudo pip install -r requirements.txt
 

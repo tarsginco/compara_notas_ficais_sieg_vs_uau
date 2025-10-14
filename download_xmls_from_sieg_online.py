@@ -10,8 +10,11 @@ from time import sleep
 import shutil
 from datetime import date
 import os
+from dotenv import load_dotenv
 
-USERNAME = os.environ.get("USERNAME_SIEG")
+load_dotenv()
+
+USERNAME = os.environ.get("USERNAME_SIEG",)
 PASSWORD = os.environ.get("PASSWORD_SIEG")
 USERNAME_SERVER = os.environ.get("USERNAME_SERVER")
 PASSWORD_SERVER = os.environ.get("PASSWORD_SERVER")
@@ -32,7 +35,7 @@ DATAFIMEMISSAO = DATAFIMEMISSAO.strftime("%d-%m-%Y")
 SERVER_IP = "10.10.1.8"
 SERVER_NAME =  'tuiuiu'
 SHARE_NAME = "01 - Área Livre"
-REMOTE_PATH_FILE = "FISCAL\NFs Pendentes UAU"
+REMOTE_PATH_FILE = r"FISCAL\NFs Pendentes UAU"
 TEMP_PATH = "/home/fernandatrentino/Ginco/temp"
 FILE_NAME ="Relatorio Xml Cofre SIEG"
 

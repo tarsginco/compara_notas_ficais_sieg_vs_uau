@@ -5,6 +5,9 @@ from dateutil.relativedelta import relativedelta
 import pandas as pd
 import pyodbc
 from openpyxl import load_workbook
+from dotenv import load_dotenv
+
+load_dotenv()
 
 USERNAME = os.environ.get("USERNAME_SIEG")
 PASSWORD = os.environ.get("PASSWORD_SIEG")
@@ -118,25 +121,29 @@ def get_data_from_uau(list_of_filters,nf_type):
         print(f"""Nfs emitidas no uau com datas entre {dtIni} e {dtFim}, (%m-%d-%Y)""") 
         separator = "','"
         filter_string = separator.join(list_of_filters) 
+        chave = ''
         if nf_type == 'nfe':
             tipo_nfe = '0' #Estadual
             especie_nfe= 'NF'
+            chave = "nfe.ChaveNFe_nfe"
         elif nf_type == 'nfse':
             tipo_nfe = '1' #Municipal
             especie_nfe = 'NF'
+            chave = "SUBSTRING(nfe.NumNfAux_nfe , PATINDEX('%[^0]%', nfe.NumNfAux_nfe +'.'), LEN(nfe.NumNfAux_nfe ))"
         else:
             tipo_nfe =0
-            especie_nfe = 'CT'            
+            especie_nfe = 'CT'
+            chave = "nfe.ChaveNFe_nfe"      
 
 
         query = f"""
             WITH notaFiscais as (
                 SELECT DISTINCT
                     CONCAT(
-                        p.cpf_pes,
-                        e.CGC_emp,
-                        SUBSTRING(nfe.NumNfAux_nfe  , PATINDEX('%[^0]%', nfe.NumNfAux_nfe +'.'), LEN(nfe.NumNfAux_nfe )),
-                        REPLACE(FORMAT(nfe.ValorTotNota_nfe,'0.00'),'.','')
+                        p.cpf_pes
+                        , e.CGC_emp
+                        , REPLACE(FORMAT(nfe.ValorTotNota_nfe,'0.00'),'.','')
+                        , {chave}
                     ) as chaveFilter
                     , nfe.ChaveNFe_nfe as ChaveNfe
                     , nfe.Empresa_nfe as Empresa 
@@ -189,21 +196,25 @@ def data_normalization(data):
     return data
 
 def compare_df():
-    nf_types = ['nfe','nfse','cte'] 
+    nf_types = {
+        'nfe':['CNPJ Emit','CNPJ Dest','Valor','Chave da NFe'] 
+        , 'nfse':['CNPJ Emit','CNPJ Dest','Valor','Num NFSe'] 
+        #, 'cte':['CNPJ Emit','CNPJ Tom','Valor','Chave CT-e'] 
+    }
     
-    for type in nf_types:
+    for type,key_filter in nf_types.items():
         temp_file_path = f"{TEMP_LOCAL_PATH}/{FILE_NAME} - {type}.xlsx"
         remote_file_path = f"{REMOTE_PATH}\{FILE_NAME} - {type}.xlsx"
 
         df_sieg = get_data_from_sieg_xlsx(type)
 
-        key_columns = ['CNPJ Emit','CNPJ Dest','Valor','Num NFe'] 
-        cnpje = data_normalization(df_sieg[key_columns[0]].astype(str))
-        cnpjd = data_normalization(df_sieg[key_columns[1]].astype(str))
-        valor = data_normalization(df_sieg[key_columns[2]].astype(str))
-        nf = data_normalization(df_sieg[key_columns[3]].astype(str))
+        key_columns = key_filter
+        cnpje = data_normalization(df_sieg[key_filter[0]].astype(str))
+        cnpjd = data_normalization(df_sieg[key_filter[1]].astype(str))
+        valor = data_normalization(df_sieg[key_filter[2]].astype(str))
+        nf = data_normalization(df_sieg[key_filter[3]].astype(str))
 
-        df_sieg["chaveFilter"] = cnpje+cnpjd+nf+valor
+        df_sieg["chaveFilter"] = cnpje+cnpjd+valor+nf
         df_sieg["original_index"] = df_sieg.index
 
         list_of_filters = df_sieg["chaveFilter"].values.tolist()
