@@ -10,6 +10,7 @@ from time import sleep
 import shutil
 from datetime import date
 import os
+import pandas as pd
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,6 +22,7 @@ PASSWORD_SERVER = os.environ.get("PASSWORD_SERVER")
 
 
 today =  date.today()
+#today = date(2025,8,15)
 #checa a data de para carregar as notas do sieg
 if today.day >= 20:
     DATAINIEMISSAO = date(2025,today.month,1)
@@ -36,7 +38,7 @@ SERVER_IP = "10.10.1.8"
 SERVER_NAME =  'tuiuiu'
 SHARE_NAME = "01 - Área Livre"
 REMOTE_PATH_FILE = r"FISCAL\NFs Pendentes UAU"
-TEMP_PATH = "/home/fernandatrentino/Ginco/temp"
+TEMP_PATH = f"{os.getcwd()}/temp"
 FILE_NAME ="Relatorio Xml Cofre SIEG"
 
 
@@ -58,8 +60,14 @@ def save_dowloaded_file():
     if connected:
         for file in os.listdir(TEMP_PATH):
             try:
+                file_date_path = f"{today.month}.{today.year}"
+                #Cria novo diretorio se não existir a pasta do mes ainda
+                list_dir = [file.filename for file in conn.listPath(SHARE_NAME,REMOTE_PATH_FILE)]
+                if file_date_path not in list_dir:
+                    conn.createDirectory(SHARE_NAME, f"{REMOTE_PATH_FILE}\{file_date_path}")
+                #Transfere os arquivos de ./temp para o servidor remoto
                 with open(os.path.join(TEMP_PATH,file), 'rb') as fp:
-                    remote_path = f"{REMOTE_PATH_FILE}\{file}"
+                    remote_path = f"{REMOTE_PATH_FILE}\{file_date_path}\{file}"
                     print('Remote path:',remote_path)
                     conn.storeFile(SHARE_NAME, remote_path, fp)
                 
@@ -76,22 +84,24 @@ def save_dowloaded_file():
         
 def download_file(driver,type):
     wait = WebDriverWait(driver, 5)
-
-    href = '' if type == 'nfe' else type
-    
+   
     try:
         if type =='nfe':
-            driver.get(f"""https://cofre.sieg.com/pesquisa-avancada""")
-        else:
-            driver.get(f"""https://cofre.sieg.com/pesquisa-avancada-{href}""")
+            driver.get("https://cofre.sieg.com/pesquisa-avancada")
+            button_exportar = f"""MainContent_cphMainContent_advancedsearch_ExcelLinkBtn"""
+        elif type == 'nfse' :
+            driver.get("https://cofre.sieg.com/pesquisa-avancada-nfse")
+            button_exportar = f"""MainContent_cphMainContent_advancedsearchnfse_ExcelLinkBtn"""
         
         print(f"Navegando para {driver.title}")
-            
+
+        #Aguarda aparecer o botão de adicionar filtros    
         try:
             add_filter = wait.until(expected_conditions.presence_of_element_located((By.XPATH,"//span[@class='las la-plus']")))
         except Exception as err:
             print(err)
         
+        #Adiciona três filtros
         add_filter.click()
         wait
         
@@ -115,9 +125,9 @@ def download_file(driver,type):
         driver.find_element(By.ID,'btnSearch').click()
         wait 
                
-        try:
 
-            export_excel = wait.until(expected_conditions.presence_of_element_located((By.ID,f"""MainContent_cphMainContent_advancedsearch{href}_ExcelLinkBtn""")))
+        try:
+            export_excel = wait.until(expected_conditions.presence_of_element_located((By.ID,button_exportar)))
         except Exception as err:
             print(err)
         
@@ -134,7 +144,7 @@ def download_file(driver,type):
         for file in os.listdir(TEMP_PATH):
             name_base = file[:24]
             year = today.strftime("%y")
-            file_date =  f"20.{today.month}.{year}" if today.day >= 20 else f"02.{today.month}.{year}"
+            file_date =  f"{today.month}.{year}"
             new_file_name = f"{name_base} - {file_date} - {type}.xlsx"
             os.rename(
                 os.path.join(TEMP_PATH,file), 
@@ -172,9 +182,8 @@ def get_data_from_sieg():
     wait = WebDriverWait(driver, 20)
 
     driver.get('https://hub.sieg.com/')
-    #manter essa resolução para buscar todo o conteudo da tabela
+    #manter essa resolução para buscar todo o conteudo da tabela de cte
     driver.set_window_size(1200, 800) 
-
     username_div = driver.find_element(By.ID,"txtEmail")
     password_div = driver.find_element(By.ID,"txtPassword")
 
@@ -199,9 +208,10 @@ def get_data_from_sieg():
     else:
         print(loggin_input.text)
 
-    nf_types = [ "nfe", "nfse", "cte"]
+    nf_types = [ "nfe", "nfse"] #, "cte"]
     for nf_type in nf_types:
         download_file(driver,nf_type)
+        
     
     driver.quit()
 

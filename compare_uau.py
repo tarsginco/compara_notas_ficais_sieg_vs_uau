@@ -32,7 +32,7 @@ SERVER_IP = "10.10.1.8"
 SERVER_NAME =  'tuiuiu'
 SHARE_NAME = "01 - Área Livre"
 REMOTE_PATH = r"FISCAL\NFs Pendentes UAU"
-TEMP_LOCAL_PATH = "/home/fernandatrentino/Ginco/temp"
+TEMP_LOCAL_PATH =  f"{os.getcwd()}/temp"
 
 # Connection string (adjust DRIVER and other parameters as needed)
 conn_str = (
@@ -208,7 +208,6 @@ def compare_df():
 
         df_sieg = get_data_from_sieg_xlsx(type)
 
-        key_columns = key_filter
         cnpje = data_normalization(df_sieg[key_filter[0]].astype(str))
         cnpjd = data_normalization(df_sieg[key_filter[1]].astype(str))
         valor = data_normalization(df_sieg[key_filter[2]].astype(str))
@@ -229,12 +228,13 @@ def compare_df():
 
         wb = load_workbook(temp_file_path)
         ws = wb.active
+        ws.title = "NFs Pendentes UAU"
 
         rows_to_delete = [4 + val for val in df_filtered["original_index"].values.tolist()]
         print('Linhas a serem deletadas:',rows_to_delete)
 
         deleted_nfs = wb.copy_worksheet(ws)
-        deleted_nfs.title = "Nfs lançadas UAU"
+        deleted_nfs.title = "Nfs Lançadas UAU"
         deleted_nfs.delete_rows(1, deleted_nfs.max_row)
         for row in rows_to_delete:
             dados_linha = [cell.value for cell in ws[row]] # Pega a primeira linha
